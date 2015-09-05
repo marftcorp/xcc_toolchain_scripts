@@ -1,0 +1,65 @@
+#!/usr/bin/perl -w
+
+my $compiler=$ARGV[0] || die("Usage: $0 <compiler>");
+
+use IO::File;
+use IPC::Open3;
+use Symbol 'gensym';
+
+sub collapseDots {
+  my ($s)=(@_);
+  for(my $ofs;($ofs=index($s,"/../"))>=0;) {
+    my $end=$ofs+3;
+    for($ofs--;substr($s,$ofs,1) ne "/";$ofs--) { }
+    substr($s,$ofs,$end-$ofs,'');
+  }
+  return $s;
+}
+
+sub straceFilter {
+  my ($cmd,$pats)=(@_);
+  my ($i,$o,$e)=(undef,undef,gensym);
+  my $pid=open3($i,$o,$e,"strace","-ff",@$cmd);
+  my $rs={};
+  while(my $l=<$e>) {
+    chomp($l);
+    my $r;
+    foreach my $pat (@$pats) {
+      if($l!~/$pat/) { goto skipit; }
+      $r=$1;
+    }
+    $r=collapseDots($r);
+    $rs->{$r}=1;
+skipit:
+  }
+  $e->close; $o->close; $i->close;
+  waitpid($pid,-1);
+  return sort keys %$rs;
+}
+
+my $io;
+
+system("rm -f getpaths.c");
+$io=new IO::File(">getpaths.c");
+printf $io "#include <doesnotexist.h>\n";
+$io->close;
+
+printf("\n---Note: search lists in alphabetical, not search order---\n");
+
+printf("\n---include search---\n%s\n",join("\n",
+  straceFilter([$compiler,"-c","getpaths.c"],
+               ['"([^"]*/include[^/]*)/.*doesnotexist.h"'])
+));
+
+system("rm -f getpaths.c");
+$io=new IO::File(">getpaths.c");
+printf $io "int main() { }\n";
+$io->close;
+
+printf("\n---library (-l) search---\n%s\n",join("\n",
+  straceFilter([$compiler,"-o","getpaths.bin","getpaths.c",
+                "-ldoesnotexist"],
+               ['^\[[^\[\]]+\] open','"([^"]*doesnotexist[^"]*)"'])
+));
+
+system("rm -f getpaths.c");

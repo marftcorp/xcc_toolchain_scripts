@@ -1,0 +1,4 @@
+libstdc++ headers end up installed outside the sysroot
+
+Debian has a few patches in addition to the /mingw/include patch (which they
+independently developed!).  We might want some of them.

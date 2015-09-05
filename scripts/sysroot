@@ -1,0 +1,118 @@
+#!/usr/bin/perl -w
+
+# XXX The extract for this in h uses -s, expecting things to start with ./; we
+#     shuold autosense the ./ and get rid of the ./ here and drop -s
+
+# XXX tar -h makes copies; recover the hard links instead (perl code)
+
+my $targets={
+
+  'bsd' => {
+    include=>[qw(
+      _ctype.h arpa arpa/inet.h assert.h crypto/cryptodev.h ctype.h dirent.h
+      dlfcn.h errno.h fcntl.h inttypes.h locale.h machine/_align.h 
+      machine/_inttypes.h machine/_limits.h machine/_stdint.h machine/_types.h 
+      machine/endian.h machine/param.h machine/signal.h machine/trap.h math.h 
+      memory.h netdb.h netinet/in.h netinet/tcp.h netinet6/in6.h pthread.h 
+      runetype.h sched.h signal.h stdint.h stdio.h stdlib.h string.h strings.h 
+      sys/_iovec.h sys/_null.h sys/_pthreadtypes.h sys/_sigset.h 
+      sys/_sockaddr_storage.h sys/_stdint.h sys/_termios.h sys/_timespec.h 
+      sys/_timeval.h sys/_types.h sys/cdefs.h sys/dirent.h sys/event.h 
+      sys/fcntl.h sys/file.h sys/filio.h sys/ioccom.h sys/ioctl.h sys/limits.h 
+      sys/mman.h sys/param.h sys/queue.h sys/resource.h sys/sched.h 
+      sys/select.h sys/signal.h sys/socket.h sys/sockio.h sys/stat.h 
+      sys/stdint.h sys/sysctl.h sys/syslimits.h sys/time.h sys/times.h 
+      sys/timespec.h sys/ttycom.h sys/ttydefaults.h sys/types.h sys/uio.h
+      sys/un.h sys/unistd.h sys/wait.h syslog.h termios.h time.h unistd.h 
+      x86/_align.h x86/_inttypes.h xlocale/_ctype.h xlocale/_locale.h 
+      xlocale/_string.h xlocale/_time.h
+      )],
+    lib=>[qw(
+      crt1.o crti.o crtn.o libc.a libc.so libm.a libm.so libpthread.a 
+      libpthread.so
+      )],
+  },
+
+  'bsd32' => { proto=>'bsd', ssh=>'ssh root@10.0.10.2' },
+  'bsd64' => { proto=>'bsd', ssh=>'ssh root@10.0.11.2' },
+
+  'osx' => {
+    include=>[qw(
+      Availability.h AvailabilityInternal.h AvailabilityMacros.h _locale.h
+      _structs.h _types.h _wctype.h alloca.h arpa/inet.h assert.h ctype.h 
+      dirent.h dlfcn.h errno.h fcntl.h glob.h i386/_limits.h i386/_param.h 
+      i386/_structs.h
+      i386/_types.h i386/endian.h i386/param.h i386/signal.h i386/types.h
+      libkern/_OSByteOrder.h libkern/i386 libkern/i386/_OSByteOrder.h
+      locale.h mach/i386/_structs.h machine/_limits.h machine/_param.h
+      machine/_structs.h machine/_types.h machine/endian.h machine/param.h
+      machine/signal.h machine/types.h math.h memory.h netdb.h netinet/in.h
+      netinet/tcp.h netinet6/in6.h pthread.h pthread_impl.h runetype.h sched.h 
+      secure/_common.h secure/_stdio.h secure/_string.h signal.h stdbool.h 
+      stddef.h stdio.h stdlib.h string.h strings.h sys/_endian.h 
+      sys/_posix_availability.h sys/_select.h sys/_structs.h 
+      sys/_symbol_aliasing.h sys/_types.h sys/appleapiopts.h sys/cdefs.h 
+      sys/dirent.h sys/errno.h sys/fcntl.h sys/file.h sys/filio.h
+      sys/ioccom.h sys/ioctl.h sys/mman.h sys/param.h sys/queue.h
+      sys/resource.h sys/select.h sys/signal.h sys/socket.h sys/sockio.h
+      sys/stat.h sys/syslimits.h sys/syslog.h sys/termios.h sys/time.h
+      sys/times.h sys/ttycom.h sys/ttydefaults.h sys/types.h sys/un.h
+      sys/unistd.h sys/wait.h syslog.h termios.h time.h unistd.h wchar.h
+      inttypes.h sys mach libkern i386 mach_debug
+      )],
+
+#     I started doing it by hand for triffid but ugh; just pull all the mach
+#     stuff in instead
+#      sys/event.h mach/clock.h mach/ndr.h libkern/OSByteOrder.h
+#      mach/boolean.h mach/machine/boolean.h mach/i386/boolean.h
+#      mach/kern_return.h mach/machine/kern_return.h mach/i386/kern_return.h
+#      mach/notify.h mach/port.h mach/machine/vm_types.h mach/i386/vm_types.h
+#      mach/i386/vm_param.h mach/message.h mach/mach_types.h mach/host_info.h
+#      mach/vm_statistics.h mach/machine.h mach/time_value.h mach/host_notify.h
+
+    lib=>[qw(
+      crt1.10.6.o crt1.o dylib1.o libSystem.dylib libgcc_s.10.4.dylib
+      libm.dylib system/libcache.dylib system/libcommonCrypto.dylib
+      system/libcompiler_rt.dylib system/libcopyfile.dylib
+      system/libdispatch.dylib system/libdnsinfo.dylib system/libdyld.dylib
+      system/libkeymgr.dylib system/liblaunch.dylib system/libmacho.dylib
+      system/libquarantine.dylib system/libremovefile.dylib
+      system/libsystem_blocks.dylib system/libsystem_c.dylib
+      system/libsystem_dnssd.dylib system/libsystem_info.dylib
+      system/libsystem_kernel.dylib system/libsystem_m.dylib
+      system/libsystem_network.dylib system/libsystem_notify.dylib
+      system/libsystem_sandbox.dylib system/libunc.dylib system/libunwind.dylib
+      system/libxpc.dylib
+      )],
+    ssh=>'ssh marftinc@mini',
+  },
+};
+
+sub gen {
+  my ($target)=@_;
+  my $t={ %{$targets->{$target}} };
+  while(defined(my $proto=$t->{proto})) {
+    delete $t->{proto};
+    foreach my $k (keys %{$targets->{$proto}})
+      { $t->{$k}=$targets->{$proto}->{$k}; }
+  }
+
+  printf("Fetching %s via '%s'...\n",$target,$t->{ssh});
+
+  my $f=join(' ',map('./include/'.$_,@{$t->{include}}),
+                 map('./lib/'.$_,@{$t->{lib}}));
+
+  my $i=new IO::File($t->{ssh}." 'cd /usr ; tar chvf - ".$f."' | xz -c |");
+  my $o=new IO::File(">sysroot-".$target.".tar.xz");
+  for(my $buf;$i->sysread($buf,1024*1024);) { $o->syswrite($buf); }
+  $i->close;
+  $o->close;
+}
+
+#my $p=$ENV{'PLAT'};
+#if(!defined($p)) { printf STDERR "Woah.\n": exit(1); }
+#gen($p);
+
+#gen('bsd32');
+#gen('bsd64');
+gen('osx');

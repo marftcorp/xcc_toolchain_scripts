@@ -1,0 +1,47 @@
+#!/bin/sh -e
+
+STRIP=0
+while : ; do
+  case $1 in
+    -s) STRIP=1 ; shift ; continue ;;
+    *)  break ;;
+  esac
+done
+if [ "$1" == "" ] ; then
+  echo "Usage: $0 [-s] <tarball>" 1>&2
+  exit 1
+fi
+BALL="$1"
+
+TOP=`dirname $0`
+TOP=`cd $TOP/.. ; pwd`
+
+BALL=`${TOP}/scripts/getdist $1`
+
+case $1 in
+  *.gz)  COMP=z ;;
+  *.ba2) COMP=j ;;
+  *.xz)  COMP=J ;;
+  *)     COMP="" ;;
+esac
+
+# Here's how you might decide to strip 1 component for ./ or tarball's name;
+# this is fragile in bash so I'd probably use perl for this.
+# (but we make it an explicit -s argument instead)
+#STRIP=0
+#LEAD=`tar ${COMP}tv --strip-components $STRIP -f $BALL | head -1 | sed 's/.* //g' | cut -d/ -f1`
+#if [ "$LEAD" == "." ] ; then STRIP=1 ; fi
+#case $1 in
+#  $LEAD*) STRIP=1 ; echo "striping 1 for $LEAD matching $1" ;;
+#esac
+
+# We need to be able to trap ^C and undo a partial result cleanly, but there
+# might be stuff in . right now, so we can't just rm -fr ./* (which is a BAD
+# commnad to put in a script anyway).  So instead, we make a unique name and
+# extract there, so we can remove that cleanly if we fail, and only at the
+# end do we (quickly and uninterruptibly) move everything therein to .
+# XXX write this
+
+tar ${COMP}xv --strip-components $STRIP -f $BALL
+
+# if there are patches associated, we can find and apply them here

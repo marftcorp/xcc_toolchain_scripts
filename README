@@ -1,0 +1,4 @@
+A batch of scripts for generating cross compiler toolchains.
+
+Usage:
+$ PLAT=<platform> ./h

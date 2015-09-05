@@ -1,0 +1,83 @@
+#!/bin/sh -e
+
+# XXX Check the date on the local cache against dev: -- proceed if can't
+#     connect, refetch if it's out of date.  rsync?
+
+while : ; do
+  case $1 in
+    -s) SILENT=1 ; shift ; continue ;;
+    *)  break ;;
+  esac
+done
+if [ "$1" == "" ] ; then
+  echo "Usage: $0 [-s] <tarball>" 1>&2
+  exit 1
+fi
+BALL="$1"
+
+useHomeDistDir() {
+  DISTDIR=~/.marft/dist
+  echo "using per-user $DISTDIR as the dist tarball cache" 1>&2
+  if [ ! -d $DISTDIR ] ; then
+    echo "$DISTDIR does not exist; creating it" 1>&2
+    if ! mkdir -p $DISTDIR ; then
+      echo "error: cannot create $DISTDIR" 1>&2
+      exit 1
+    fi
+    if ! chmod 755 $DISTDIR ; then
+      echo "error: cannot set mode 755 on $DISTDIR" 1>&2
+      exit 1
+    fi
+  fi
+}
+
+# Try to use /home/dist if it eixsts, otherwise make one in the user's HOME
+DISTDIR=/home/dist
+if [ ! -d $DISTDIR ] ; then
+  echo "$DISTDIR does not exist; consider creating it (mode 777)" 1>&2
+  useHomeDistDir
+else
+#  echo "using $DISTDIR as the dist tarball cache" 1>&2
+# be silent on the normal success path
+  true
+fi
+
+# Ensure the DISTDIR is writeable by the current user
+UNIQ=`date`
+UNIQ=`echo "$UNIQ $$" | md5sum | cut -d' ' -f1`
+if ! touch ${DISTDIR}/.tmp.${UNIQ} ; then
+  echo "error: cannot create files in dist tarball cache $DISTDIR" 1>&2
+  exit 1
+else
+  rm -f ${DISTDIR}/.tmp.${UNIQ}
+fi
+
+# Ensure the DISTDIR has a .nobackup
+if [ ! -e ${DISTDIR}/.nobackup ] ; then
+  if ! touch ${DISTDIR}/.nobackup ; then
+    echo "error: cannot touch ${DISTDIR}/.nobackup" 1>&2
+    exit 1
+  fi
+fi
+
+# You can't leave the tarball there half-transferred if they ^C during transfer
+CLEANME=""
+cleanup() {
+  if [ "$CLEANME" != "" ] ; then
+    echo "SIGINT: removing incomplete $CLEANME" 1>&2
+    rm -f ${CLEANME}
+    exit 1
+  fi
+}
+
+if [ ! -e ${DISTDIR}/${BALL} ] ; then
+  CLEANME=${DISTDIR}/${BALL} ; trap 'cleanup' SIGINT
+  echo "$BALL: fetching from dev.marft.com to $DISTDIR" 1>&2
+  if ! scp -B dev.marft.com:/home/dist/$BALL ${DISTDIR} ; then
+    echo "error: failed to fetch" 1>&2
+    cleanup # does not return
+  fi
+  trap '' SIGINT
+fi
+
+if [ "$SILENT" == "" ] ; then echo $DISTDIR/$BALL ; fi

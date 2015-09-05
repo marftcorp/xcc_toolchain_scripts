@@ -1,0 +1,14 @@
+No, don't hardcode that.  That's what --program-prefix is for. --mcq
+
+--- mingw-w64-crt/configure.orig	2013-12-31 13:46:53.793040831 -0700
++++ mingw-w64-crt/configure	2013-12-31 13:46:23.733040832 -0700
+@@ -1254,7 +1254,8 @@
+ fi
+ 
+ ac_tool_prefix=
+-test -n "$host_alias" && ac_tool_prefix=$host_alias-
++#test -n "$host_alias" && ac_tool_prefix=$host_alias-
++test -n "$program_prefix" && ac_tool_prefix="$program_prefix"
+ 
+ test "$silent" = yes && exec 6>/dev/null
+ 

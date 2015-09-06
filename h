@@ -11,8 +11,11 @@ SYSROOTDIST=sysroot-${PLAT}.tar.xz
 MAKEJ=-j8
 
 #- ^^^configure me^^^ ---------------------------------------------------------
-
+  
 case $PLAT in
+  arm32) TARG=arm-linux-gnueabihf DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
+  # arm32) TARG=arm-none-eabi DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
+  # arm32) TARG=arm-linux-eabi     DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
   bsd64) TARG=x86_64-freebsd9    DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
   bsd32) TARG=i686-freebsd9      DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
   deb64) TARG=x86_64-linux-gnu   DEPS="sysroot gcc gcc2" ;;
@@ -47,7 +50,8 @@ binutils() {
       --target=$TARG \
       --with-libdir=$PREFIX/binutilslibdir \
       --with-sysroot=$PREFIX/binutilssysroot \
-      --with-lib-path=$PREFIX/sysroot/lib
+      --with-lib-path=$PREFIX/sysroot/lib \
+      --enable-targets="all"                 # added by mkresch
     TOOLDIR=$PREFIX/binutils                 # scriptsdir=TOOLDIR/lib/ldscripts
     make tooldir=$TOOLDIR ${MAKEJ}
     make tooldir=$TOOLDIR install
@@ -151,6 +155,7 @@ gcc() {
       --disable-libatomic \
       --disable-libgomp \
       ${NEWLIB}
+    # -mfloat-abi added by mkresch for arm...
     make ${MAKEJ} all-gcc
     make install-gcc
     rm -fr $PREFIX/../lib           # This is the libiberty bug commented below

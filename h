@@ -11,11 +11,11 @@ SYSROOTDIST=sysroot-${PLAT}.tar.xz
 MAKEJ=-j8
 
 #- ^^^configure me^^^ ---------------------------------------------------------
+
+GCC_CONFIG_FLAGS=""
   
 case $PLAT in
-  arm32) TARG=arm-linux-gnueabihf DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
-  # arm32) TARG=arm-none-eabi DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
-  # arm32) TARG=arm-linux-eabi     DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
+  arm7h) TARG=arm-linux-gnueabihf DEPS="sysroot gcc gcc2" GCC_CONFIG_FLAGS=--with-float=hard ;;
   bsd64) TARG=x86_64-freebsd9    DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
   bsd32) TARG=i686-freebsd9      DEPS="sysroot gcc gcc2" NEWLIB=1 ;;
   deb64) TARG=x86_64-linux-gnu   DEPS="sysroot gcc gcc2" ;;
@@ -50,8 +50,7 @@ binutils() {
       --target=$TARG \
       --with-libdir=$PREFIX/binutilslibdir \
       --with-sysroot=$PREFIX/binutilssysroot \
-      --with-lib-path=$PREFIX/sysroot/lib \
-      --enable-targets="all"                 # added by mkresch
+      --with-lib-path=$PREFIX/sysroot/lib
     TOOLDIR=$PREFIX/binutils                 # scriptsdir=TOOLDIR/lib/ldscripts
     make tooldir=$TOOLDIR ${MAKEJ}
     make tooldir=$TOOLDIR install
@@ -145,6 +144,7 @@ gcc() {
       --with-as=$PREFIX/bin/${PLAT}-as \
       --with-ld=$PREFIX/bin/${PLAT}-ld \
       --enable-languages=c${LANGS} \
+      $GCC_CONFIG_FLAGS \
       $PTHREAD_FLAGS \
       --without-headers \
       --disable-multilib \
@@ -155,7 +155,6 @@ gcc() {
       --disable-libatomic \
       --disable-libgomp \
       ${NEWLIB}
-    # -mfloat-abi added by mkresch for arm...
     make ${MAKEJ} all-gcc
     make install-gcc
     rm -fr $PREFIX/../lib           # This is the libiberty bug commented below
